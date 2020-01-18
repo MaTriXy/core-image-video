@@ -10,23 +10,24 @@ import Foundation
 import AVFoundation
 import GLKit
 
-let pixelBufferDict: [NSObject:AnyObject] =
-  [kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange]
 
+let pixelBufferDict: [String:Any] =
+    [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange]
 
 class VideoSampleBufferSource: NSObject {
     lazy var displayLink: CADisplayLink =
-        CADisplayLink(target: self, selector: "displayLinkDidRefresh:")
+        CADisplayLink(target: self, selector: #selector(displayLinkDidRefresh(link:)))
     
     let videoOutput: AVPlayerItemVideoOutput
-    let consumer: CVPixelBuffer -> ()
+    let consumer: ((CVPixelBuffer) -> ())
     let player: AVPlayer
     
-    init?(url: NSURL, consumer callback: CVPixelBuffer -> ()) {
-        player = AVPlayer(URL: url)
+    init?(url: URL, consumer callback: @escaping (CVPixelBuffer) -> ()) {
+        player = AVPlayer(url: url)
         consumer = callback
+         
         videoOutput = AVPlayerItemVideoOutput(pixelBufferAttributes: pixelBufferDict)
-        player.currentItem.addOutput(videoOutput)
+        player.currentItem?.add(videoOutput)
         
         super.init()
 
@@ -35,15 +36,16 @@ class VideoSampleBufferSource: NSObject {
     }
     
     func start() {
-        displayLink.addToRunLoop(NSRunLoop.mainRunLoop(), forMode: NSRunLoopCommonModes)
+        displayLink.add( to: RunLoop.main, forMode: RunLoop.Mode.common)
     }
     
-    func displayLinkDidRefresh(link: CADisplayLink) {
-        let itemTime = videoOutput.itemTimeForHostTime(CACurrentMediaTime())
-        if videoOutput.hasNewPixelBufferForItemTime(itemTime) {
-            var presentationItemTime = kCMTimeZero
-            let pixelBuffer = videoOutput.copyPixelBufferForItemTime(itemTime, itemTimeForDisplay: &presentationItemTime)
-            consumer(pixelBuffer)
+    @objc func displayLinkDidRefresh(link: CADisplayLink) {
+        let itemTime = videoOutput.itemTime(forHostTime: CACurrentMediaTime())
+        if videoOutput.hasNewPixelBuffer(forItemTime: itemTime) {
+            var presentationItemTime = CMTime.zero
+            if let pixelBuffer = videoOutput.copyPixelBuffer(forItemTime: itemTime, itemTimeForDisplay: &presentationItemTime) {
+                consumer(pixelBuffer)
+            }
         }
 
     }

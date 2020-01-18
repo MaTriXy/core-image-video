@@ -9,48 +9,48 @@
 import Foundation
 import UIKit
 
-typealias Filter = CIImage -> CIImage
+typealias Filter = ((CIImage) -> (CIImage))
 
 func blur(radius: Double) -> Filter {
     return { image in
-        let parameters = [
+        let parameters:[String:Any] = [
             kCIInputRadiusKey: radius,
             kCIInputImageKey: image
         ]
         let filter = CIFilter(name: "CIGaussianBlur",
-            withInputParameters: parameters)
-        return filter.outputImage
+                              parameters: parameters)
+        return filter!.outputImage!
     }
 }
 
-func colorGenerator(color: UIColor) -> Filter {
+func colorGenerator(_ color: UIColor) -> Filter {
     return { _ in
         let parameters = [kCIInputColorKey: color]
         let filter = CIFilter(name: "CIConstantColorGenerator",
-            withInputParameters: parameters)
-        return filter.outputImage
+            parameters: parameters)
+        return filter!.outputImage!
     }
 }
 
 func hueAdjust(angleInRadians: Float) -> Filter {
     return { image in
-        let parameters = [
+        let parameters:[String : Any] = [
             kCIInputAngleKey: angleInRadians,
             kCIInputImageKey: image
-        ]
+            ]
         let filter = CIFilter(name: "CIHueAdjust",
-            withInputParameters: parameters)
-        return filter.outputImage
+            parameters: parameters)
+        return filter!.outputImage!
     }
 }
 
 func pixellate(scale: Float) -> Filter {
     return { image in
-        let parameters = [
+        let parameters:[String : Any] = [
             kCIInputImageKey:image,
             kCIInputScaleKey:scale
         ]
-        return CIFilter(name: "CIPixellate", withInputParameters: parameters).outputImage
+        return CIFilter(name: "CIPixellate", parameters: parameters)!.outputImage!
     }
 }
 
@@ -59,44 +59,44 @@ func kaleidoscope() -> Filter {
         let parameters = [
             kCIInputImageKey:image,
         ]
-        return CIFilter(name: "CITriangleKaleidoscope", withInputParameters: parameters).outputImage.imageByCroppingToRect(image.extent())
+        return CIFilter(name: "CITriangleKaleidoscope", parameters: parameters)!.outputImage!.cropped(to: image.extent)
     }
 }
 
 
 func vibrance(amount: Float) -> Filter {
     return { image in
-        let parameters = [
+        let parameters:[String:Any] = [
             kCIInputImageKey: image,
             "inputAmount": amount
         ]
-        return CIFilter(name: "CIVibrance", withInputParameters: parameters).outputImage
+        return CIFilter(name: "CIVibrance", parameters: parameters)!.outputImage!
     }
 }
 
-func compositeSourceOver(overlay: CIImage) -> Filter {
+func compositeSourceOver(_ overlay: CIImage) -> Filter {
     return { image in
-        let parameters = [
+        let parameters:[String:Any]  = [
             kCIInputBackgroundImageKey: image,
             kCIInputImageKey: overlay
         ]
         let filter = CIFilter(name: "CISourceOverCompositing",
-            withInputParameters: parameters)
-        let cropRect = image.extent()
-        return filter.outputImage.imageByCroppingToRect(cropRect)
+            parameters: parameters)
+        let cropRect = image.extent
+        return filter!.outputImage!.cropped(to:cropRect)
     }
 }
 
 
 func radialGradient(center: CGPoint, radius: CGFloat) -> CIImage {
-    let params: [NSObject: AnyObject] = [
+    let params: [String: Any] = [
         "inputColor0": CIColor(red: 1, green: 1, blue: 1),
         "inputColor1": CIColor(red: 0, green: 0, blue: 0),
-        "inputCenter": CIVector(CGPoint: center),
+        "inputCenter": CIVector(cgPoint: center),
         "inputRadius0": radius,
         "inputRadius1": radius + 1
     ]
-    return CIFilter(name: "CIRadialGradient", withInputParameters: params).outputImage
+    return CIFilter(name: "CIRadialGradient", parameters: params)!.outputImage!
 }
 
 func blendWithMask(background: CIImage, mask: CIImage) -> Filter {
@@ -107,9 +107,9 @@ func blendWithMask(background: CIImage, mask: CIImage) -> Filter {
             kCIInputImageKey: image
         ]
         let filter = CIFilter(name: "CIBlendWithMask",
-            withInputParameters: parameters)
-        let cropRect = image.extent()
-        return filter.outputImage.imageByCroppingToRect(cropRect)
+            parameters: parameters)
+        let cropRect = image.extent
+        return filter!.outputImage!.cropped(to:cropRect)
     }
 }
 
@@ -120,9 +120,11 @@ func colorOverlay(color: UIColor) -> Filter {
     }
 }
 
+infix operator >>>: FilterPrecedence
 
-infix operator >>> { associativity left }
-
-func >>> (filter1: Filter, filter2: Filter) -> Filter {
+precedencegroup FilterPrecedence {
+    associativity: left
+}
+func >>> (filter1: @escaping Filter, filter2: @escaping Filter) -> Filter {
     return { img in filter2(filter1(img)) }
 }

@@ -12,27 +12,27 @@ import AVFoundation
 extension CGAffineTransform {
     
     init(rotatingWithAngle angle: CGFloat) {
-        let t = CGAffineTransformMakeRotation(angle)
+        let t = CGAffineTransform(rotationAngle: angle)
         self.init(a: t.a, b: t.b, c: t.c, d: t.d, tx: t.tx, ty: t.ty)
         
     }
     init(scaleX sx: CGFloat, scaleY sy: CGFloat) {
-        let t = CGAffineTransformMakeScale(sx, sy)
+        let t = CGAffineTransform(scaleX: sx, y: sy)
         self.init(a: t.a, b: t.b, c: t.c, d: t.d, tx: t.tx, ty: t.ty)
         
     }
     
     func scale(sx: CGFloat, sy: CGFloat) -> CGAffineTransform {
-        return CGAffineTransformScale(self, sx, sy)
+        return CGAffineTransform(scaleX: sx, y: sy)
     }
     func rotate(angle: CGFloat) -> CGAffineTransform {
-        return CGAffineTransformRotate(self, angle)
+        return CGAffineTransform(rotationAngle: angle)
     }
 }
 
 extension CIImage {
     convenience init(buffer: CMSampleBuffer) {
-        self.init(CVPixelBuffer: CMSampleBufferGetImageBuffer(buffer))
+        self.init(cvPixelBuffer: CMSampleBufferGetImageBuffer(buffer)!)
     }
 }
 
@@ -42,21 +42,21 @@ extension CGRect {
     }
 }
 
-extension AVCaptureDevicePosition {
+extension AVCaptureDevice.Position {
     var transform: CGAffineTransform {
         switch self {
-        case .Front:
-            return CGAffineTransform(rotatingWithAngle: -CGFloat(M_PI_2)).scale(1, sy: -1)
-        case .Back:
-            return CGAffineTransform(rotatingWithAngle: -CGFloat(M_PI_2))
+        case .front:
+            return CGAffineTransform(rotatingWithAngle: -CGFloat(Double.pi/2)).scale(sx: 1, sy: -1)
+        case .back:
+            return CGAffineTransform(rotatingWithAngle: -CGFloat(Double.pi/2))
         default:
-            return CGAffineTransformIdentity
+            return .identity
             
         }
     }
     
     var device: AVCaptureDevice? {
-        return AVCaptureDevice.devicesWithMediaType(AVMediaTypeVideo).filter {
+        return AVCaptureDevice.devices(for: AVMediaType.video).filter {
             $0.position == self
             }.first as? AVCaptureDevice
     }
